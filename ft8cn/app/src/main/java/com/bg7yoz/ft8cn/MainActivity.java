@@ -1,12 +1,12 @@
 package com.bg7yoz.ft8cn;
 /**
- * FT8CN程序的主Activity。本APP采用Fragment框架实现，每个Fragment实现不同的功能。
+ * Main Activity for the FT8CN application. This app uses a Fragment framework, with each Fragment implementing different functionalities.
  * ----2022.5.6-----
- * 主要完成以下功能：
- * 1.生成MainViewModel实例。MainViewModel是用于整个生存周期，用于录音、解析等功能。
- * 2.录音、存储的权限申请。
- * 3.实现Fragment的导航管理。
- * 4.USB串口连接后的提示
+ * Main functions include:
+ * 1. Creating a MainViewModel instance. MainViewModel is used throughout the application lifecycle for features like recording and parsing.
+ * 2. Requesting permissions for recording and storage.
+ * 3. Managing Fragment navigation.
+ * 4. Displaying notifications after USB serial port connection.
  * @author BG7YOZ
  * @date 2022.5.6
  */
@@ -90,53 +90,125 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int PERMISSION_REQUEST = 1;
 
+    /**
+     * Called when the activity is first created.
+     * This method orchestrates the initialization of the main components of the activity,
+     * including permissions, window settings, core application variables, ViewModel, ViewBinding,
+     * UI observers, UI listeners, navigation, initial animations, and data loading.
+     *
+     * @param savedInstanceState If the activity is being re-initialized after previously being shut down
+     *                           then this Bundle contains the data it most recently supplied in onSaveInstanceState(Bundle).
+     *                           Note: Otherwise it is null.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState); // Always call the superclass first
 
+        // Step 1: Handle permissions based on Android version.
+        updatePermissionsForAndroidS();
+        // Step 2: Check and request necessary runtime permissions.
+        checkPermission();
+        // Step 3: Configure window appearance (fullscreen, keep screen on).
+        setupWindowFlags();
+        // Step 4: Initialize global variables and locale-specific settings.
+        initializeCoreVariables();
+        // Step 5: Set up the ViewModel and ViewBinding for the activity.
+        setupViewModelAndBinding();
+        // Step 6: Set the activity's content view using the binding's root.
+        setContentView(binding.getRoot());
+
+        // Step 7: Initialize the singleton ToastMessage utility.
+        ToastMessage.getInstance();
+        // Step 8: Register a broadcast receiver for Bluetooth state changes.
+        registerBluetoothReceiver();
+        // Note: Initial Bluetooth connection check is commented out to prevent issues during screen rotation.
+        // if (mainViewModel.isBTConnected()) {
+        //    //mainViewModel.setBlueToothOn(); // BV6LC This could cause errors on screen rotation.
+        // }
+
+        // Step 9: Set up LiveData observers to react to data changes from the ViewModel.
+        setupObservers();
+        // Step 10: Attach listeners to UI elements for user interaction.
+        setupUIListeners();
+        // Step 11: Configure the NavController and BottomNavigationView for app navigation.
+        setupNavigation();
+
+        // Step 12: Display version information in the welcome text view.
+        binding.welcomTextView.setText(String.format(getString(R.string.version_info)
+                , GeneralVariables.VERSION, GeneralVariables.BUILD_DATE));
+
+        // Step 13: Manage the initial startup animation and the setup of the FloatView.
+        handleInitialAnimationAndFloatView();
+        // Step 14: Load essential application data.
+        InitData();
+
+        // Step 15: Populate the list of available USB devices.
+        mainViewModel.getUsbDevice();
+
+        // Step 16: Apply a blinking animation to the transmitting message text view.
+        binding.transmittingMessageTextView.setAnimation(AnimationUtils.loadAnimation(this
+                , R.anim.view_blink));
+    }
+
+    /**
+     * Updates the permissions array for Android S (API level 31) and above
+     * to include BLUETOOTH_CONNECT.
+     */
+    private void updatePermissionsForAndroidS() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             permissions = new String[]{Manifest.permission.RECORD_AUDIO
                     , Manifest.permission.ACCESS_COARSE_LOCATION
                     , Manifest.permission.ACCESS_WIFI_STATE
                     , Manifest.permission.BLUETOOTH
                     , Manifest.permission.BLUETOOTH_ADMIN
-                    , Manifest.permission.BLUETOOTH_CONNECT
+                    , Manifest.permission.BLUETOOTH_CONNECT // Added for Android S
                     , Manifest.permission.MODIFY_AUDIO_SETTINGS
                     , Manifest.permission.WAKE_LOCK
                     , Manifest.permission.ACCESS_FINE_LOCATION};
         }
+    }
 
-        checkPermission();
-        //全屏
+    /**
+     * Sets window flags for full-screen mode and to keep the screen on.
+     */
+    private void setupWindowFlags() {
+        // Set to full screen
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN
                 , WindowManager.LayoutParams.FLAG_FULLSCREEN);
-
-        //禁止休眠
+        // Prevent screen sleep
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
                 , WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        super.onCreate(savedInstanceState);
-        GeneralVariables.getInstance().setMainContext(getApplicationContext());
+    }
 
-        //判断是不是简体中文
+    /**
+     * Initializes core application variables, including setting the main context
+     * and determining language/locale settings.
+     */
+    private void initializeCoreVariables() {
+        GeneralVariables.getInstance().setMainContext(getApplicationContext());
+        // Check if the system language is Traditional Chinese
         GeneralVariables.isTraditionalChinese =
                 getResources().getConfiguration().locale.getDisplayCountry().equals("中國");
-
-        //确定是不是中国、香港、澳门、台湾
+        // Check if the locale is China, Hong Kong, Macau, or Taiwan
         GeneralVariables.isChina = (getResources().getConfiguration().locale
                 .getLanguage().toUpperCase().startsWith("ZH"));
+    }
 
+    /**
+     * Initializes the MainViewModel and MainActivityBinding.
+     */
+    private void setupViewModelAndBinding() {
         mainViewModel = MainViewModel.getInstance(this);
         binding = MainActivityBinding.inflate(getLayoutInflater());
-        binding.initDataLayout.setVisibility(View.VISIBLE);//显示LOG页面
-        setContentView(binding.getRoot());
+        binding.initDataLayout.setVisibility(View.VISIBLE); // Show LOG page initially
+    }
 
-
-
-        ToastMessage.getInstance();
-        registerBluetoothReceiver();//注册蓝牙动作改变的广播
-        if (mainViewModel.isBTConnected()) {
-            //mainViewModel.setBlueToothOn(); // BV6LC 這邊會造成翻轉螢幕時重新藍牙連線造成錯誤
-        }
-        //观察DEBUG信息
+    /**
+     * Sets up observers for LiveData instances from the MainViewModel.
+     * These observers handle UI updates based on data changes.
+     */
+    private void setupObservers() {
+        // Observe DEBUG messages
         GeneralVariables.mutableDebugMessage.observe(this, new Observer<String>() {
             @Override
             public void onChanged(String s) {
@@ -148,14 +220,8 @@ public class MainActivity extends AppCompatActivity {
                 binding.debugMessageTextView.setText(s);
             }
         });
-        binding.debugLayout.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                binding.debugLayout.setVisibility(View.GONE);
-            }
-        });
 
-
+        // Observe recording state to show/hide UTC progress bar
         mainViewModel.mutableIsRecording.observe(this, new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean aBoolean) {
@@ -166,7 +232,8 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-        //观察时钟的变化，显示进度条
+
+        // Observe timer changes to update the progress bar
         mainViewModel.timerSec.observe(this, new Observer<Long>() {
             @Override
             public void onChanged(Long aLong) {
@@ -180,58 +247,12 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        //添加点击发射消息提示窗口点击关闭动作
-        binding.transmittingLayout.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                binding.transmittingLayout.setVisibility(View.GONE);
-            }
-        });
-        //清空缓存中的文件
-        //deleteFolderFile(this.getCacheDir().getPath());
-
-        //Log.e(TAG, this.getCacheDir().getPath());
-
-        //用于Fragment的导航。
-        NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager().findFragmentById(R.id.fragmentContainerView);
-        assert navHostFragment != null;//断言不为空
-        navController = navHostFragment.getNavController();
-
-        NavigationUI.setupWithNavController(binding.navView, navController);
-        //此处增加回调是因为当APP主动navigation后，无法回到解码的界面
-        binding.navView.setOnNavigationItemSelectedListener(new BottomNavigationView.OnNavigationItemSelectedListener() {
-            @Override
-            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-                //Log.e(TAG, "onNavigationItemSelected: "+item.toString() );
-                navController.navigate(item.getItemId());
-                //binding.navView.setLabelFor(item.getItemId());
-                return true;
-            }
-        });
-
-        //FT8CN Ver %s\nBG7YOZ\n%s
-        binding.welcomTextView.setText(String.format(getString(R.string.version_info)
-                , GeneralVariables.VERSION, GeneralVariables.BUILD_DATE));
-
-        floatView = new FloatView(this, 32);
-        if (!animatorRunned) {
-            animationImage();
-            animatorRunned = true;
-        } else {
-            binding.initDataLayout.setVisibility(View.GONE);
-
-            InitFloatView();
-        }
-        //初始化数据
-        InitData();
-
-
-        //观察是不是flex radio
+        // Observe whether it is a FlexRadio
         mainViewModel.mutableIsFlexRadio.observe(this, new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean aBoolean) {
                 if (aBoolean) {
-                    //添加flex配置按钮
+                    // Add FlexRadio configuration button
                     floatView.addButton(R.id.flex_radio, "flex_radio", R.drawable.flex_icon
                             , new View.OnClickListener() {
                                 @Override
@@ -239,18 +260,18 @@ public class MainActivity extends AppCompatActivity {
                                     navController.navigate(R.id.flexRadioInfoFragment);
                                 }
                             });
-                } else {//删除flex配置按钮
+                } else {// Delete FlexRadio configuration button
                     floatView.deleteButtonByName("flex_radio");
                 }
             }
         });
 
-        //观察是不是xiegu radio
+        // Observe whether it is a Xiegu radio
         mainViewModel.mutableIsXieguRadio.observe(this, new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean aBoolean) {
                 if (aBoolean) {
-                    //添加xiegu配置按钮
+                    // Add Xiegu configuration button
                     floatView.addButton(R.id.xiegu_radio, "xiegu_radio", R.drawable.xiegulogo32
                             , new View.OnClickListener() {
                                 @Override
@@ -258,21 +279,13 @@ public class MainActivity extends AppCompatActivity {
                                     navController.navigate(R.id.xieguInfoFragment);
                                 }
                             });
-                } else {//删除xiegu配置按钮
+                } else {// Delete Xiegu configuration button
                     floatView.deleteButtonByName("xiegu_radio");
                 }
             }
         });
 
-        //关闭串口设备列表按钮
-        binding.closeSelectSerialPortImageView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                binding.selectSerialPortLayout.setVisibility(View.GONE);
-            }
-        });
-
-        //观察串口设备列表的变化
+        // Observe changes in the serial port device list
         mainViewModel.mutableSerialPorts.observe(this, new Observer<ArrayList<CableSerialPort.SerialPort>>() {
             @Override
             public void onChanged(ArrayList<CableSerialPort.SerialPort> serialPorts) {
@@ -280,14 +293,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        //列USB设备列表
-        mainViewModel.getUsbDevice();
-
-
-        //设置发射消息框的动画
-        binding.transmittingMessageTextView.setAnimation(AnimationUtils.loadAnimation(this
-                , R.anim.view_blink));
-        //观察发射的状态
+        // Observe the transmitting state
         mainViewModel.ft8TransmitSignal.mutableIsTransmitting.observe(this,
                 new Observer<Boolean>() {
                     @Override
@@ -300,7 +306,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
 
-        //观察发射内容的变化
+        // Observe changes in the transmitting content
         mainViewModel.ft8TransmitSignal.mutableTransmittingMessage.observe(this,
                 new Observer<String>() {
                     @Override
@@ -310,38 +316,118 @@ public class MainActivity extends AppCompatActivity {
                 });
     }
 
+    /**
+     * Sets up UI listeners for various interactive elements.
+     */
+    private void setupUIListeners() {
+        // Listener to hide the debug layout when clicked
+        binding.debugLayout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                binding.debugLayout.setVisibility(View.GONE);
+            }
+        });
+
+        // Add click listener to close the transmitting message window
+        binding.transmittingLayout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                binding.transmittingLayout.setVisibility(View.GONE);
+            }
+        });
+
+        // Close serial port device list button
+        binding.closeSelectSerialPortImageView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                binding.selectSerialPortLayout.setVisibility(View.GONE);
+            }
+        });
+    }
 
     /**
-     * 添加浮动按钮
+     * Sets up the navigation controller and the bottom navigation view.
      */
+    private void setupNavigation() {
+        // Used for Fragment navigation.
+        NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager().findFragmentById(R.id.fragmentContainerView);
+        assert navHostFragment != null; // Assert not null
+        navController = navHostFragment.getNavController();
 
+        NavigationUI.setupWithNavController(binding.navView, navController);
+        // This callback is added because after the APP actively navigates, it cannot return to the decoding interface
+        binding.navView.setOnNavigationItemSelectedListener(new BottomNavigationView.OnNavigationItemSelectedListener() {
+            @Override
+            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+                navController.navigate(item.getItemId());
+                return true;
+            }
+        });
+    }
+
+    /**
+     * Handles the initial animation display and FloatView initialization.
+     * If the animation has not run before, it starts the animation.
+     * Otherwise, it hides the initial data layout and initializes the FloatView directly.
+     */
+    private void handleInitialAnimationAndFloatView() {
+        floatView = new FloatView(this, 32);
+        if (!animatorRunned) {
+            animationImage(); // Start animation if not run before
+            animatorRunned = true;
+        } else {
+            binding.initDataLayout.setVisibility(View.GONE); // Hide init layout if animation already run
+            InitFloatView(); // Initialize FloatView
+        }
+    }
+
+
+    /**
+     * Initializes and configures the FloatView, a floating action button menu.
+     * This method adds the FloatView to the main container and populates it with several
+     * action buttons:
+     * - A button to toggle the visibility of the bottom navigation bar.
+     * - A button to open the frequency selection dialog.
+     * - A button to open the volume settings dialog.
+     * - A button to launch the GridTrackerMainActivity.
+     * The FloatView is positioned on the right side of the screen.
+     * Dynamic buttons for FlexRadio and XieguRadio are added/removed via observers in `setupObservers`.
+     */
     private void InitFloatView() {
-        //floatView = new FloatView(this, 32);
+        // Ensure floatView is initialized (typically done in handleInitialAnimationAndFloatView or onCreate)
+        if (floatView == null) {
+            floatView = new FloatView(this,32);
+        }
 
-        binding.container.addView(floatView);
-        floatView.setButtonMargin(0);
-        floatView.setFloatBoard(FloatView.FLOAT_BOARD.RIGHT);
+        binding.container.addView(floatView); // Add FloatView to the main layout container
+        floatView.setButtonMargin(0); // Set margin for individual buttons within FloatView
+        floatView.setFloatBoard(FloatView.FLOAT_BOARD.RIGHT); // Anchor FloatView to the right edge
 
-        floatView.setButtonBackgroundResourceId(R.drawable.float_button_style);
-        //动态添加按钮，建议使用静态的ID，静态ID在VALUES/FLOAT_BUTTON_IDS.XML中设置
+        floatView.setButtonBackgroundResourceId(R.drawable.float_button_style); // Apply custom background to buttons
+
+        // Dynamically add buttons. Static IDs from R.id are recommended.
+        // These IDs are defined in res/values/ids.xml (or similar).
+
+        // 1. Navigation Toggle Button: Shows/hides the bottom navigation bar.
         floatView.addButton(R.id.float_nav, "float_nav", R.drawable.ic_baseline_fullscreen_24
                 , new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
                         FloatViewButton button = floatView.getButtonByName("float_nav");
                         if (binding.navView.getVisibility() == View.VISIBLE) {
-                            binding.navView.setVisibility(View.GONE);
+                            binding.navView.setVisibility(View.GONE); // Hide navigation view
                             if (button != null) {
-                                button.setImageResource(R.drawable.ic_baseline_fullscreen_exit_24);
+                                button.setImageResource(R.drawable.ic_baseline_fullscreen_exit_24); // Change icon
                             }
                         } else {
-                            binding.navView.setVisibility(View.VISIBLE);
+                            binding.navView.setVisibility(View.VISIBLE); // Show navigation view
                             if (button != null) {
-                                button.setImageResource(R.drawable.ic_baseline_fullscreen_24);
+                                button.setImageResource(R.drawable.ic_baseline_fullscreen_24); // Change icon
                             }
                         }
                     }
                 });
+        // Button to open frequency selection dialog
         floatView.addButton(R.id.float_freq, "float_freq", R.drawable.ic_baseline_freq_24
                 , new View.OnClickListener() {
                     @Override
@@ -349,7 +435,7 @@ public class MainActivity extends AppCompatActivity {
                         new FreqDialog(binding.container.getContext(), mainViewModel).show();
                     }
                 });
-
+        // Button to open volume setting dialog
         floatView.addButton(R.id.set_volume, "set_volume", R.drawable.ic_baseline_volume_up_24
                 , new View.OnClickListener() {
                     @Override
@@ -357,7 +443,7 @@ public class MainActivity extends AppCompatActivity {
                         new SetVolumeDialog(binding.container.getContext(), mainViewModel).show();
                     }
                 });
-        //打开网格追踪
+        // Button to open Grid Tracker
         floatView.addButton(R.id.grid_tracker, "grid_tracker", R.drawable.ic_baseline_grid_tracker_24
                 , new View.OnClickListener() {
                     @Override
@@ -376,64 +462,96 @@ public class MainActivity extends AppCompatActivity {
 //                    }
 //                });
 
-        floatView.initLocation();
+        floatView.initLocation(); // Initialize the location of the FloatView
     }
 
     /**
-     * 初始化一些数据
+     * Orchestrates the initialization of various application data components.
+     * It ensures that data is loaded only once. The process involves:
+     * 1. Loading operation band data.
+     * 2. Loading callsign, grid, and other configuration parameters.
+     * 3. Loading followed callsigns and initializing the callsign database.
+     * This method delegates to more specific loader methods.
      */
     private void InitData() {
-        if (mainViewModel.configIsLoaded) return;//如果数据已经读取一遍了，就不用再读取了。
+        // Prevent re-initialization if data is already loaded
+        if (mainViewModel.configIsLoaded) return;
 
-        //读取波段数据
+        // Delegate to specific data loading methods
+        loadOperationBandData();
+        loadCallsignAndGridData();
+        loadFollowCallsignsAndDatabase();
+    }
+
+    /**
+     * Loads the operational band data required by the application.
+     * It retrieves an instance of `OperationBand` using the base context
+     * and assigns it to the `mainViewModel` if it's not already initialized.
+     */
+    private void loadOperationBandData() {
         if (mainViewModel.operationBand == null) {
             mainViewModel.operationBand = OperationBand.getInstance(getBaseContext());
         }
+    }
 
+    /**
+     * Loads callsign and grid-related data.
+     * This includes QSL DXCC information, general configuration parameters,
+     * and Maidenhead grid information (prioritizing GPS data if available).
+     * It also navigates to settings if callsign or grid is missing.
+     */
+    private void loadCallsignAndGridData() {
         mainViewModel.databaseOpr.getQslDxccToMap();
 
-        //获取所有的配置参数
+        // Get all configuration parameters
         mainViewModel.databaseOpr.getAllConfigParameter(new OnAfterQueryConfig() {
             @Override
             public void doOnBeforeQueryConfig(String KeyName) {
-
+                // Actions before querying config (if any)
             }
 
             @Override
             public void doOnAfterQueryConfig(String KeyName, String Value) {
-                mainViewModel.configIsLoaded = true;
-                //此处梅登海德已经通过数据库得到了，但是如果GPS能获取到，还是用GPS的
+                mainViewModel.configIsLoaded = true; // Mark config as loaded
+                // Here Maidenhead grid has been obtained from the database,
+                // but if GPS can obtain it, use GPS data.
                 String grid = MaidenheadGrid.getMyMaidenheadGrid(getApplicationContext());
-				// 依照設定精準度
-				grid=grid.substring(0, Math.min( (GeneralVariables.gpsPrecision*2+4),
-																				grid.length() )
-														);
-				
-                if (!grid.equals("")) {//说明获取到了GPS数据
+                // Adjust precision according to settings
+                grid = grid.substring(0, Math.min((GeneralVariables.gpsPrecision * 2 + 4),
+                        grid.length())
+                );
+
+                if (!grid.equals("")) { // Indicates that GPS data was obtained
                     GeneralVariables.setMyMaidenheadGrid(grid);
-                    //写到数据库中
+                    // Write to the database
                     mainViewModel.databaseOpr.writeConfig("grid", grid, null);
                 }
 
                 mainViewModel.ft8TransmitSignal.setTimer_sec(GeneralVariables.transmitDelay);
-                //如果呼号、网格为空，就进入设置界面
+                // If callsign or grid is empty, go to the settings interface
                 if (GeneralVariables.getMyMaidenheadGrid().equals("")
                         || GeneralVariables.myCallsign.equals("")) {
                     runOnUiThread(new Runnable() {
                         @Override
-                        public void run() {//导航到设置页面
+                        public void run() { // Navigate to the settings page
                             navController.navigate(R.id.menu_nav_config);
                         }
                     });
                 }
             }
         });
+    }
 
-        //把历史中通联成功的呼号与网格的对应关系
+    /**
+     * Loads followed callsigns from the database and initializes the callsign database.
+     * It also retrieves the mapping of historical callsigns to grids.
+     */
+    private void loadFollowCallsignsAndDatabase() {
+        // Map successfully communicated callsigns and grids from history
         new DatabaseOpr.GetCallsignMapGrid(mainViewModel.databaseOpr.getDb()).execute();
 
         mainViewModel.getFollowCallsignsFromDataBase();
-        //打开呼号位置信息的数据库，目前是以内存数据库方式。
+        // Open the callsign location information database, currently as an in-memory database.
         if (GeneralVariables.callsignDatabase == null) {
             GeneralVariables.callsignDatabase = CallsignDatabase.getInstance(getBaseContext(), null, 1);
         }
@@ -441,82 +559,118 @@ public class MainActivity extends AppCompatActivity {
 
 
     /**
-     * 检查权限
+     * Check for necessary permissions.
+     * This method identifies which permissions are not yet granted and requests them.
      */
     private void checkPermission() {
         mPermissionList.clear();
 
-        //判断哪些权限未授予
+        // Check which permissions have not been granted
         for (String permission : permissions) {
             if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
                 mPermissionList.add(permission);
             }
         }
 
-        //判断是否为空
-        if (!mPermissionList.isEmpty()) {//请求权限方法
-            String[] permissions = mPermissionList.toArray(new String[mPermissionList.size()]);//将List转为数组
+        // If the list is not empty, request permissions
+        if (!mPermissionList.isEmpty()) {// Request permissions method
+            String[] permissions = mPermissionList.toArray(new String[mPermissionList.size()]);// Convert List to array
             ActivityCompat.requestPermissions(MainActivity.this, permissions, PERMISSION_REQUEST);
         }
     }
 
 
     /**
-     * 响应授权
-     * 这里不管用户是否拒绝，都进入首页，不再重复申请权限
+     * Callback for the result from requesting permissions.
+     * Regardless of whether the user denies permissions, proceed to the main page
+     * and do not repeatedly request permissions.
+     * @param requestCode The request code passed in requestPermissions(android.app.Activity, String[], int)
+     * @param permissions The requested permissions. Never null.
+     * @param grantResults The grant results for the corresponding permissions which is either PackageManager.PERMISSION_GRANTED or PackageManager.PERMISSION_DENIED. Never null.
      */
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode != PERMISSION_REQUEST) {
+            // If the request code does not match, delegate to the superclass.
+            // This handles cases where other permission requests might be active.
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
+        // No specific action is taken here based on grantResults, as the app proceeds regardless.
+        // The actual check for permissions and their impact is handled elsewhere,
+        // or the app functions with degraded capabilities if permissions are denied.
     }
 
 
     /**
-     * 显示串口设备列表
+     * Dynamically populates and displays a list of available USB serial port devices.
+     * This method is called when the `mutableSerialPorts` LiveData in `MainViewModel` changes.
+     * It clears any existing views in `selectSerialPortLinearLayout` and then inflates
+     * a new view (`select_serial_port_list_view_item`) for each detected serial port.
+     * An OnClickListener is set for each item to connect to the selected rig via `mainViewModel.connectCableRig()`.
+     * The visibility of the `selectSerialPortLayout` (which contains this list) is managed based on
+     * whether any ports are available and if a rig is not already connected.
      */
     public void setSelectUsbDevice() {
+        // Retrieve the current list of serial ports from the ViewModel.
         ArrayList<CableSerialPort.SerialPort> ports = mainViewModel.mutableSerialPorts.getValue();
+        if (ports == null) return; // Exit if the list is null.
+
+        // Clear any previously added views from the layout.
         binding.selectSerialPortLinearLayout.removeAllViews();
-        for (int i = 0; i < ports.size(); i++) {//动态添加串口设备列表
+
+        // Iterate through the list of serial ports and create a view for each.
+        for (int i = 0; i < ports.size(); i++) {
+            final CableSerialPort.SerialPort currentPort = ports.get(i); // Get the current port.
+            // Inflate the item layout for the serial port.
             View layout = LayoutInflater.from(getApplicationContext())
-                    .inflate(R.layout.select_serial_port_list_view_item, null);
-            layout.setId(i);
+                    .inflate(R.layout.select_serial_port_list_view_item, binding.selectSerialPortLinearLayout, false);
+            // It's good practice to set an ID that can be easily retrieved, though here 'i' is used directly.
+            // layout.setId(View.generateViewId()); // Alternative for unique IDs.
+
+            // Get the TextView from the inflated layout and set its text to the port's information.
             TextView textView = layout.findViewById(R.id.selectSerialPortListViewItemTextView);
-            textView.setText(ports.get(i).information());
+            textView.setText(currentPort.information());
+
+            // Add the newly created view to the LinearLayout.
             binding.selectSerialPortLinearLayout.addView(layout);
+
+            // Set an OnClickListener for the item. When clicked, it attempts to connect to the rig.
+            final int portIndex = i; // Use a final variable for use in lambda
             layout.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    //连接电台并做电台的频率设置等操作
-                    mainViewModel.connectCableRig(getApplicationContext(), ports.get(view.getId()));
+                    // Instruct the ViewModel to connect to the selected serial port.
+                    mainViewModel.connectCableRig(getApplicationContext(), ports.get(portIndex));
+                    // Hide the serial port selection dialog after a selection is made.
                     binding.selectSerialPortLayout.setVisibility(View.GONE);
                 }
             });
         }
 
-        //选择串口设备弹框
+        // Determine the visibility of the serial port selection dialog.
+        // Show if there's at least one port and no rig is currently connected.
         if ((ports.size() >= 1) && (!mainViewModel.isRigConnected())) {
             binding.selectSerialPortLayout.setVisibility(View.VISIBLE);
-        } else {//说明没有可以识别的驱动，不显示设备弹框
+        } else {
+            // Hide if no ports are available or if a rig is already connected.
             binding.selectSerialPortLayout.setVisibility(View.GONE);
         }
     }
 
     /**
-     * 删除指定文件夹中的所有文件
+     * Delete all files in the specified folder.
      *
-     * @param filePath 指定的文件夹
+     * @param filePath The path of the specified folder.
      */
     public static void deleteFolderFile(String filePath) {
         try {
-            File file = new File(filePath);//获取SD卡指定路径
-            File[] files = file.listFiles();//获取SD卡指定路径下的文件或者文件夹
-            for (int i = 0; i < files.length; i++) {
-                if (files[i].isFile()) {//如果是文件直接删除
-                    File tempFile = new File(files[i].getPath());
+            File file = new File(filePath);// Get the specified path on the SD card
+            File[] files = file.listFiles();// Get files or folders under the specified path on the SD card
+            if (files == null) return; // No files or directory does not exist
+            for (File value : files) {
+                if (value.isFile()) {// If it is a file, delete it directly
+                    File tempFile = new File(value.getPath());
                     tempFile.delete();
                 }
             }
@@ -525,138 +679,193 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Sets up and starts the initial animation for the logo and navigation view.
+     * The animation includes fading out the logo and sliding in the navigation view.
+     * After the animation ends, the FloatView is initialized and made visible.
+     */
     private void animationImage() {
-
+        // Animator for the bottom navigation view:
+        // It translates the view vertically from 200 pixels below its final position to its final position.
+        // The animation starts after a delay (implicit in the floatValues) and lasts for 3000ms.
         ObjectAnimator navigationAnimator = ObjectAnimator.ofFloat(binding.navView, "translationY", 200);
-        navigationAnimator.setDuration(3000);
+        navigationAnimator.setDuration(3000); // Total duration of this animator
+        // The values 200, 200, 200, 0 mean:
+        // Start at translationY = 200, stay there for a portion of the duration,
+        // then animate to translationY = 0 (its original position).
         navigationAnimator.setFloatValues(200, 200, 200, 0);
 
-
+        // Animator for the initial data layout (e.g., welcome screen or logo):
+        // It fades out the layout from fully opaque (alpha=1f) to fully transparent (alpha=0f).
+        // The animation also lasts for 3000ms.
         ObjectAnimator hideLogoAnimator = ObjectAnimator.ofFloat(binding.initDataLayout, "alpha", 1f, 1f, 1f, 0);
-        hideLogoAnimator.setDuration(3000);
+        hideLogoAnimator.setDuration(3000); // Total duration of this animator
+        // The values 1f, 1f, 1f, 0f mean:
+        // Start at alpha = 1f, stay there for a portion, then fade to alpha = 0f.
 
+        // AnimatorSet to play both animations simultaneously.
         AnimatorSet animatorSet = new AnimatorSet();
         animatorSet.playTogether(navigationAnimator, hideLogoAnimator);
-        //animatorSet.playTogether(initPositionStrAnimator, logoAnimator, navigationAnimator, hideLogoAnimator);
+
+        // Add a listener to perform actions at the end of the animation set.
         animatorSet.addListener(new Animator.AnimatorListener() {
             @Override
             public void onAnimationStart(Animator animator) {
-
+                // Code to run when the animation starts (optional).
             }
 
             @Override
             public void onAnimationEnd(Animator animator) {
-                //animationEnd = true;
+                // This block runs when both animations have completed.
+                // animationEnd = true; // A flag that could be used elsewhere (currently commented out).
+
+                // Hide the initial data layout as it has faded out.
                 binding.initDataLayout.setVisibility(View.GONE);
+                // Make the UTC progress bar visible.
                 binding.utcProgressBar.setVisibility(View.VISIBLE);
-                InitFloatView();//显示浮窗
-                //binding.floatView.setVisibility(View.VISIBLE);
+                // Initialize and display the FloatView (floating action buttons).
+                InitFloatView();
+                // binding.floatView.setVisibility(View.VISIBLE); // Alternative if FloatView is a direct child (commented out).
             }
 
             @Override
             public void onAnimationCancel(Animator animator) {
-
+                // Code to run if the animation is cancelled (optional).
             }
 
             @Override
             public void onAnimationRepeat(Animator animator) {
-
+                // Code to run if the animation repeats (optional, not typical for this setup).
             }
         });
 
-        animatorSet.start();
+        animatorSet.start(); // Begin the animations.
     }
 
 
-    //此方法只有在android:launchMode="singleTask"模式下起作用
+    /**
+     * This method is called when the activity is re-launched while at the top of the activity stack.
+     * It checks if a USB device has been attached and triggers a refresh of the USB device list.
+     * This is effective when android:launchMode="singleTask" is set for the activity.
+     * @param intent The new intent that was started for the activity.
+     */
     @Override
     protected void onNewIntent(Intent intent) {
+        // Check if the intent action indicates a USB device attachment
         if ("android.hardware.usb.action.USB_DEVICE_ATTACHED".equals(intent.getAction())) {
-            mainViewModel.getUsbDevice();
+            mainViewModel.getUsbDevice(); // Refresh the list of USB devices
         }
         super.onNewIntent(intent);
     }
 
 
+    /**
+     * Handles the back button press.
+     * If the current destination is the start destination of the navigation graph,
+     * it shows an exit confirmation dialog. Otherwise, it navigates up in the
+     * navigation stack.
+     */
     @Override
     public void onBackPressed() {
-        if (navController.getGraph().getStartDestination() == navController.getCurrentDestination().getId()) {//说明是到最后一个页面了
+        // Check if the current destination is the start destination in the navigation graph
+        if (navController.getGraph().getStartDestination() == navController.getCurrentDestination().getId()) {
+            // If it's the last page, show an exit confirmation dialog
             AlertDialog.Builder builder = new AlertDialog.Builder(this)
                     .setMessage(getString(R.string.exit_confirmation))
                     .setPositiveButton(getString(R.string.exit)
                             , new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialogInterface, int i) {
+                                    // Deactivate FT8 transmit signal if active
                                     if (mainViewModel.ft8TransmitSignal.isActivated()) {
                                         mainViewModel.ft8TransmitSignal.setActivated(false);
                                     }
-                                    closeThisApp();//退出APP
+                                    closeThisApp();// Exit the APP
                                 }
                             }).setNegativeButton(getString(R.string.cancel)
                             , new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialogInterface, int i) {
-                                    dialogInterface.dismiss();
+                                    dialogInterface.dismiss(); // Dismiss the dialog
                                 }
                             });
-            builder.create().show();
+            builder.create().show(); // Create and show the dialog
 
-        } else {//退出activity堆栈
-            navController.navigateUp();
-            //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR);
+        } else {// Exit the activity stack
+            navController.navigateUp(); // Navigate up in the fragment stack
+            //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR); // Example of changing screen orientation (commented out)
         }
     }
 
+    /**
+     * Closes the application.
+     * This method deactivates the FT8 transmit signal, disconnects any connected rig,
+     * stops the FT8 signal listener, nullifies the MainViewModel, and exits the application.
+     */
     private void closeThisApp() {
-        mainViewModel.ft8TransmitSignal.setActivated(false);
+        mainViewModel.ft8TransmitSignal.setActivated(false); // Deactivate transmission
+        // Disconnect the rig if connected
         if (mainViewModel.baseRig != null) {
             if (mainViewModel.baseRig.getConnector() != null) {
                 mainViewModel.baseRig.getConnector().disconnect();
             }
         }
 
-        mainViewModel.ft8SignalListener.stopListen();
-        mainViewModel = null;
-        System.exit(0);
+        mainViewModel.ft8SignalListener.stopListen(); // Stop listening for FT8 signals
+        mainViewModel = null; // Release MainViewModel instance
+        System.exit(0); // Terminate the application
     }
 
 
     /**
-     * 注册蓝牙动作广播
+     * Register Bluetooth action broadcast receiver.
+     * This initializes and registers a BroadcastReceiver to listen for Bluetooth state changes,
+     * device connections/disconnections, and SCO audio state updates.
      */
     private void registerBluetoothReceiver() {
         if (mReceive == null) {
             mReceive = new BluetoothStateBroadcastReceive(getApplicationContext(), mainViewModel);
         }
         IntentFilter intentFilter = new IntentFilter();
+        // Actions for Bluetooth adapter state changes
         intentFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+        // Actions for Bluetooth device ACL connection events
         intentFilter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
         intentFilter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
+        // Actions for SCO audio state updates
         intentFilter.addAction(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED);
         intentFilter.addAction(AudioManager.EXTRA_SCO_AUDIO_PREVIOUS_STATE);
-        intentFilter.addAction(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
+        intentFilter.addAction(AudioManager.ACTION_AUDIO_BECOMING_NOISY); // e.g., headphones unplugged
         intentFilter.addAction(AudioManager.EXTRA_SCO_AUDIO_STATE);
+        // Actions for Bluetooth connection state changes (generic)
         intentFilter.addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
         intentFilter.addAction(BluetoothAdapter.EXTRA_CONNECTION_STATE);
         intentFilter.addAction(BluetoothAdapter.EXTRA_STATE);
+        // Specific states for adapter on/off (some devices might use these)
         intentFilter.addAction("android.bluetooth.BluetoothAdapter.STATE_OFF");
         intentFilter.addAction("android.bluetooth.BluetoothAdapter.STATE_ON");
-        registerReceiver(mReceive, intentFilter);
+        registerReceiver(mReceive, intentFilter); // Register the receiver
     }
 
     /**
-     * 注销蓝牙动作广播
+     * Unregister Bluetooth action broadcast receiver.
+     * This unregisters the previously registered BroadcastReceiver for Bluetooth events.
      */
     private void unregisterBluetoothReceiver() {
         if (mReceive != null) {
-            unregisterReceiver(mReceive);
-            mReceive = null;
+            unregisterReceiver(mReceive); // Unregister the receiver
+            mReceive = null; // Release the receiver instance
         }
     }
 
+    /**
+     * Called when the activity is being destroyed.
+     * This method ensures that the Bluetooth broadcast receiver is unregistered
+     * to prevent memory leaks.
+     */
     @Override
     protected void onDestroy() {
-        unregisterBluetoothReceiver();
+        unregisterBluetoothReceiver(); // Unregister Bluetooth receiver
         super.onDestroy();
     }
 
