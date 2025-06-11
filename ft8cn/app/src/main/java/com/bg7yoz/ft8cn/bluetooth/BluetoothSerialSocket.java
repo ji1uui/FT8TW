@@ -110,8 +110,10 @@ private static final String TAG = BluetoothSerialSocket.class.getSimpleName();
             //noinspection InfiniteLoopStatement
             while (true) {
                 len = socket.getInputStream().read(buffer);
-                if (len == -1) {
-                    throw new IOException("Bluetooth input stream closed");
+if (len == -1) {
+                    IOException e = new IOException("Bluetooth input stream closed");
+                    Log.e(TAG, "Bluetooth input stream closed", e);
+                    throw e;
                 }
                 byte[] data = Arrays.copyOf(buffer, len);
                 if (listener != null)
