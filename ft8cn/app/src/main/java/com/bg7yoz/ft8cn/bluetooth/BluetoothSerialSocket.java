@@ -64,16 +64,18 @@ public class BluetoothSerialSocket implements Runnable {
     void disconnect() {
         listener = null; // ignore remaining data and errors
         // connected = false; // run loop will reset connected
-        if(socket != null) {
+        if (socket != null) {
             try {
                 socket.close();
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                Log.e(TAG, "Error closing bluetooth socket", e);
             }
             socket = null;
         }
         try {
             context.unregisterReceiver(disconnectBroadcastReceiver);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            Log.e(TAG, "Error unregistering disconnect receiver", e);
         }
     }
 
@@ -108,8 +110,11 @@ public class BluetoothSerialSocket implements Runnable {
             //noinspection InfiniteLoopStatement
             while (true) {
                 len = socket.getInputStream().read(buffer);
+                if (len == -1) {
+                    throw new IOException("Bluetooth input stream closed");
+                }
                 byte[] data = Arrays.copyOf(buffer, len);
-                if(listener != null)
+                if (listener != null)
                     listener.onSerialRead(data);
             }
         } catch (Exception e) {
