@@ -68,7 +68,7 @@ public class BluetoothSerialSocket implements Runnable {
             try {
                 socket.close();
             } catch (Exception e) {
-                Log.e(TAG, "Error closing bluetooth socket", e);
+private static final String TAG = BluetoothSerialSocket.class.getSimpleName();
             }
             socket = null;
         }
