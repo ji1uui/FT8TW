@@ -22,6 +22,7 @@ import com.bg7yoz.ft8cn.wave.WaveFileReader;
 import com.bg7yoz.ft8cn.wave.WaveFileWriter;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class FT8SignalListener {
     private static final String TAG = "FT8SignalListener";
@@ -38,6 +39,11 @@ public class FT8SignalListener {
     private DatabaseOpr db;
 
     private final A91List a91List = new A91List();//a91列表
+
+    //前回周期のデコードがまだ終わっていない場合に、新しいデコードとの重なり（CPU競合）を防ぐ。
+    //デコードが遅れて次のスロットと重なると、両方の周期のデコード性能が劣化するため、
+    //古い周期を優先完了させ、新しい周期はスキップする。
+    private final AtomicBoolean decodeInProgress = new AtomicBoolean(false);
 
 
     static {
@@ -110,61 +116,53 @@ public class FT8SignalListener {
     }
 
     public void decodeFt8(long utc, float[] voiceData) {
-
-        //此处是测试用代码-------------------------
-//        String fileName = getCacheFileName("test_01.wav");
-//        Log.e(TAG, "onClick: fileName:" + fileName);
-//        WaveFileReader reader = new WaveFileReader(fileName);
-//        int data[][] = reader.getData();
-        //----------------------------------------------------------
+        //前回の周期のデコードが完了していない場合は、今回の周期をスキップする。
+        //並行してデコードを実行するとCPUが競合し、両方の周期の同期検出・LDPC反復が遅延して
+        //デコード性能（取りこぼし）が悪化するため、重複実行を防ぐ。
+        if (!decodeInProgress.compareAndSet(false, true)) {
+            Log.w(TAG, "前回のデコードが未完了のため、今回の周期はスキップします");
+            return;
+        }
 
         new Thread(new Runnable() {
             @Override
             public void run() {
-                long time = System.currentTimeMillis();
-                if (onFt8Listen != null) {
-                    onFt8Listen.beforeListen(utc);
-                }
+                try {
+                    long time = System.currentTimeMillis();
+                    if (onFt8Listen != null) {
+                        onFt8Listen.beforeListen(utc);
+                    }
 
-//                float[] tempData = ints2floats(data);
+                    //オーディオの前処理：DCオフセット除去＋安全な振幅正規化。
+                    //録音デバイス（USBオーディオ、SCO等）によってDCオフセットや入力レベルが大きく異なり、
+                    //そのままでは同期相関の閾値判定が不安定になる。ここで整えることで弱信号の検出率が上がる。
+                    float[] pcm = preprocessAudio(voiceData);
 
+                    ///读入音频数据，并做预处理
+                    //其实这种方式要注意一个问题，在一个周期之内，必须解码完毕，否则新的解码又要开始了
+                    long ft8Decoder = InitDecoder(utc, FT8Common.SAMPLE_RATE
+                            , pcm.length, true);
+                    DecoderMonitorPressFloat(pcm, ft8Decoder);//读入音频数据
 
-                ///读入音频数据，并做预处理
-                //其实这种方式要注意一个问题，在一个周期之内，必须解码完毕，否则新的解码又要开始了
-                long ft8Decoder = InitDecoder(utc, FT8Common.SAMPLE_RATE
-                        , voiceData.length, true);
-//                        , tempData.length, true);
-                DecoderMonitorPressFloat(voiceData, ft8Decoder);//读入音频数据
-//                DecoderMonitorPressFloat(tempData, ft8Decoder);//读入音频数据
-
-
-                ArrayList<Ft8Message> allMsg = new ArrayList<>();
-//                ArrayList<Ft8Message> msgs = runDecode(utc, voiceData,false);
-                ArrayList<Ft8Message> msgs = runDecode(ft8Decoder, utc, false);
-                addMsgToList(allMsg, msgs);
-                timeSec = System.currentTimeMillis() - time;
-                decodeTimeSec.postValue(timeSec);//解码耗时
-                if (onFt8Listen != null) {
-                    onFt8Listen.afterDecode(utc, averageOffset(allMsg), UtcTimer.sequential(utc), msgs, false);
-                }
-
-
-                if (GeneralVariables.deepDecodeMode) {//进入深度解码模式
-                    //float[] newSignal=tempData;
-                    msgs = runDecode(ft8Decoder, utc, true);
+                    ArrayList<Ft8Message> allMsg = new ArrayList<>();
+                    ArrayList<Ft8Message> msgs = runDecode(ft8Decoder, utc, false);
                     addMsgToList(allMsg, msgs);
                     timeSec = System.currentTimeMillis() - time;
                     decodeTimeSec.postValue(timeSec);//解码耗时
                     if (onFt8Listen != null) {
-                        onFt8Listen.afterDecode(utc, averageOffset(allMsg), UtcTimer.sequential(utc), msgs, true);
+                        onFt8Listen.afterDecode(utc, averageOffset(allMsg), UtcTimer.sequential(utc), msgs, false);
                     }
 
-                    do {
-                        if (timeSec > FT8Common.DEEP_DECODE_TIMEOUT) break;//此处做超时检测，超过一定时间(7秒)，就不做减码操作了
-                        //减去解码的信号
-                        ReBuildSignal.subtractSignal(ft8Decoder, a91List);
 
-                        //再做一次解码
+                    if (GeneralVariables.deepDecodeMode) {//进入深度解码模式
+                        //高速パスで解けた強い信号を先に差し引く（サブトラクティブ・デコード）。
+                        //強信号に隠れた弱信号が、最初のディープパスから見えるようになり、
+                        //弱信号の取りこぼしを減らせる（JTAlert/WSJT-X系のサブトラクション相当）。
+                        if (a91List.size() > 0
+                                && timeSec <= FT8Common.DEEP_DECODE_TIMEOUT) {
+                            ReBuildSignal.subtractSignal(ft8Decoder, a91List);
+                        }
+
                         msgs = runDecode(ft8Decoder, utc, true);
                         addMsgToList(allMsg, msgs);
                         timeSec = System.currentTimeMillis() - time;
@@ -173,16 +171,82 @@ public class FT8SignalListener {
                             onFt8Listen.afterDecode(utc, averageOffset(allMsg), UtcTimer.sequential(utc), msgs, true);
                         }
 
-                    } while (msgs.size() > 0 );
+                        do {
+                            if (timeSec > FT8Common.DEEP_DECODE_TIMEOUT) break;//此处做超时检测，超过一定时间(7秒)，就不做减码操作了
+                            //减去解码的信号
+                            ReBuildSignal.subtractSignal(ft8Decoder, a91List);
 
+                            //再做一次解码
+                            msgs = runDecode(ft8Decoder, utc, true);
+                            addMsgToList(allMsg, msgs);
+                            timeSec = System.currentTimeMillis() - time;
+                            decodeTimeSec.postValue(timeSec);//解码耗时
+                            if (onFt8Listen != null) {
+                                onFt8Listen.afterDecode(utc, averageOffset(allMsg), UtcTimer.sequential(utc), msgs, true);
+                            }
+
+                        } while (msgs.size() > 0);
+
+                    }
+                    //移到finalize() 方法中调用了
+                    DeleteDecoder(ft8Decoder);
+
+                    Log.d(TAG, String.format("解码耗时:%d毫秒", System.currentTimeMillis() - time));
+                } finally {
+                    decodeInProgress.set(false);
                 }
-                //移到finalize() 方法中调用了
-                DeleteDecoder(ft8Decoder);
-
-                Log.d(TAG, String.format("解码耗时:%d毫秒", System.currentTimeMillis() - time));
-
             }
         }).start();
+    }
+
+    /**
+     * オーディオ前処理。FT8の同期・復号の前段で、入力信号の質を整える。
+     * <ul>
+     *     <li>DCオフセット除去：入力の平均値を引く。USBサウンドデバイス等で混入するDC成分は
+     *         低周波の相関ピークを汚し、同期候補の検出を不安定にする。</li>
+     *     <li>振幅正規化：あまりに小さい入力だけを持ち上げる（ゲイン上限つき）。
+     *         過大入力はクリップに近いので触らず、小さすぎる信号のみ底上げして弱信号の検出を助ける。
+     *         増幅し過ぎるとノイズも持ち上がるため、ゲインには上限を設ける。</li>
+     * </ul>
+     * 注意：FT8の周波数同期・LDPC自体はlibft8cn.so内で行われるため、ここでは位相や時間を変えず、
+     * 無害なスカラー処理のみを行う。
+     *
+     * @param data 生のPCMデータ（-1.0〜1.0想定）
+     * @return 前処理後のPCMデータ。入力が空/不正ならそのまま返す。
+     */
+    private float[] preprocessAudio(float[] data) {
+        if (data == null || data.length == 0) return data;
+
+        //1) DCオフセット除去
+        double sum = 0;
+        for (float v : data) sum += v;
+        float mean = (float) (sum / data.length);
+
+        //2) ピーク振幅を測定（絶対値の最大）
+        float peak = 0f;
+        for (float v : data) {
+            float a = Math.abs(v - mean);
+            if (a > peak) peak = a;
+        }
+        if (peak < 1e-6f) return data;//無音相当。何もしない。
+
+        //3) 小さい信号のみ持ち上げる。目標ピーク0.5、増幅上限8倍。
+        //   すでに十分な振幅がある(>0.5)場合は触らない（クリップや過増幅を避ける）。
+        final float targetPeak = 0.5f;
+        final float maxGain = 8.0f;
+        float gain = 1.0f;
+        if (peak < targetPeak) {
+            gain = Math.min(targetPeak / peak, maxGain);
+        }
+        if (Math.abs(mean) < 1e-5f && gain == 1.0f) {
+            return data;//処理不要
+        }
+
+        float[] out = new float[data.length];
+        for (int i = 0; i < data.length; i++) {
+            out[i] = (data[i] - mean) * gain;
+        }
+        return out;
     }
 
 
