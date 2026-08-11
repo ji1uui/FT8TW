@@ -138,7 +138,7 @@ public class UtcTimer {
         //TimerTask timerTask = initTask();
         //执行timer，延时0执行，周期100毫秒
 
-        secTimer.schedule(secTask(), 0, 10);
+        secTimer.schedule(secTask(), 0, 100);
         heartBeatTimer.schedule(heartBeatTask(), 0, 1000);
     }
 

@@ -55,6 +55,7 @@ public class FlexMeterRulerView extends View {
         }else {
             this.value = value;
         }
+        invalidate();
     }
 
     public void initVal(float low,float high,float max,int normal_count,int high_count){
@@ -63,15 +64,18 @@ public class FlexMeterRulerView extends View {
         this.maxVal=max;
         this.normalCount=normal_count;
         this.highCount=high_count;
+        invalidate();
     }
     public void initLabels(String label,String unit,String[] normal,String[] high){
         this.label=label;
         this.unit=unit;
         this.normalLabels=normal;
         this.highLabels=high;
+        invalidate();
     }
     public void setLabel(String label) {
         this.label = label;
+        invalidate();
     }
 
     public FlexMeterRulerView(Context context) {
@@ -186,8 +190,6 @@ public class FlexMeterRulerView extends View {
                     , rulerRect.bottom + 8 * getResources().getDisplayMetrics().density
                     , fontPaint);
         }
-
-        invalidate();
     }
 
 }

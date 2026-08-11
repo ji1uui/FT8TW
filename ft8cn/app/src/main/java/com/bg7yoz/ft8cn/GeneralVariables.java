@@ -26,6 +26,7 @@ import com.bg7yoz.ft8cn.timer.UtcTimer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -212,8 +213,8 @@ public class GeneralVariables {
 
     public static boolean autoFollowCQ = true;//自动关注CQ
     public static boolean autoCallFollow = true;//自动呼叫关注的呼号
-    public static ArrayList<String> QSL_Callsign_list = new ArrayList<>();//QSL成功的呼号
-    public static ArrayList<String> QSL_Callsign_list_other_band = new ArrayList<>();//在其它波段QSL成功的呼号
+    public static HashSet<String> QSL_Callsign_list = new HashSet<>();//QSL成功的呼号
+    public static HashSet<String> QSL_Callsign_list_other_band = new HashSet<>();//在其它波段QSL成功的呼号
 
 
     public static final ArrayList<String> followCallsign = new ArrayList<>();//关注的呼号

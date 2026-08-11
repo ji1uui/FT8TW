@@ -44,6 +44,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class DatabaseOpr extends SQLiteOpenHelper {
     private static final String TAG = "DatabaseOpr";
@@ -548,17 +549,17 @@ public class DatabaseOpr extends SQLiteOpenHelper {
      */
     public void addCallsignQTH(String callsign, String grid) {
         if (grid.trim().length() < 4) return;
-        new AddCallsignQTH(db).execute(callsign, grid);
+        new AddCallsignQTH(db).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, callsign, grid);
         Log.d(TAG, String.format("addCallsignQTH: callsign:%s,grid:%s", callsign, grid));
     }
 
     //查询配置信息。
     public void getConfigByKey(String KeyName, OnAfterQueryConfig onAfterQueryConfig) {
-        new QueryConfig(db, KeyName, onAfterQueryConfig).execute();
+        new QueryConfig(db, KeyName, onAfterQueryConfig).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     public void getCallSign(String callsign, String fieldName, String tableName, OnGetCallsign getCallsign) {
-        new QueryCallsign(db, tableName, fieldName, callsign, getCallsign).execute();
+        new QueryCallsign(db, tableName, fieldName, callsign, getCallsign).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     /**
@@ -566,11 +567,11 @@ public class DatabaseOpr extends SQLiteOpenHelper {
      */
     public void writeConfig(String KeyName, String Value, OnAfterWriteConfig onAfterWriteConfig) {
         Log.d(TAG, "writeConfig: Value:" + Value);
-        new WriteConfig(db, KeyName, Value, onAfterWriteConfig).execute();
+        new WriteConfig(db, KeyName, Value, onAfterWriteConfig).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     public void writeMessage(ArrayList<Ft8Message> messages) {
-        new WriteMessages(db, messages).execute();
+        new WriteMessages(db, messages).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     /**
@@ -579,7 +580,7 @@ public class DatabaseOpr extends SQLiteOpenHelper {
      * @param onAffterQueryFollowCallsigns 回调函数
      */
     public void getFollowCallsigns(OnAfterQueryFollowCallsigns onAffterQueryFollowCallsigns) {
-        new GetFollowCallSigns(db, onAffterQueryFollowCallsigns).execute();
+        new GetFollowCallSigns(db, onAffterQueryFollowCallsigns).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     /**
@@ -587,7 +588,7 @@ public class DatabaseOpr extends SQLiteOpenHelper {
      * @param onAfterQueryFollowCallsigns 回调
      */
     public void getMessageLogTotal(OnAfterQueryFollowCallsigns onAfterQueryFollowCallsigns) {
-        new GetMessageLogTotal(db, onAfterQueryFollowCallsigns).execute();
+        new GetMessageLogTotal(db, onAfterQueryFollowCallsigns).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     /**
@@ -595,7 +596,7 @@ public class DatabaseOpr extends SQLiteOpenHelper {
      * @param onAfterQueryFollowCallsigns 回调
      */
     public void getSWLQsoLogTotal(OnAfterQueryFollowCallsigns onAfterQueryFollowCallsigns) {
-        new GetSWLQsoTotal(db, onAfterQueryFollowCallsigns).execute();
+        new GetSWLQsoTotal(db, onAfterQueryFollowCallsigns).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
 
@@ -605,7 +606,7 @@ public class DatabaseOpr extends SQLiteOpenHelper {
      * @param callsign 呼号
      */
     public void addFollowCallsign(String callsign) {
-        new AddFollowCallSign(db, callsign).execute();
+        new AddFollowCallSign(db, callsign).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     /**
@@ -649,7 +650,7 @@ public class DatabaseOpr extends SQLiteOpenHelper {
      * @param qslRecord 通联记录
      */
     public void addQSL_Callsign(QSLRecord qslRecord) {
-        new AddQSL_Info(this, qslRecord).execute();
+        new AddQSL_Info(this, qslRecord).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     /**
@@ -657,24 +658,24 @@ public class DatabaseOpr extends SQLiteOpenHelper {
      * @param qslRecord 通联日志记录
      */
     public void addSWL_QSO(QSLRecord qslRecord) {
-        new Add_SWL_QSO_Info(this, qslRecord).execute();
+        new Add_SWL_QSO_Info(this, qslRecord).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     //删除数据库中关注的呼号
     public void deleteFollowCallsign(String callsign) {
-        new DeleteFollowCallsign(db, callsign).execute();
+        new DeleteFollowCallsign(db, callsign).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     //获取所有配置参数
     public void getAllConfigParameter(OnAfterQueryConfig onAfterQueryConfig) {
-        new GetAllConfigParameter(db, this.context, onAfterQueryConfig).execute();
+        new GetAllConfigParameter(db, this.context, onAfterQueryConfig).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     /**
      * 查询全部成功通联的呼号，能通联的频率为条件
      */
     public void getAllQSLCallsigns() {
-        new LoadAllQSLCallsigns(db).execute();
+        new LoadAllQSLCallsigns(db).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
 
@@ -685,7 +686,7 @@ public class DatabaseOpr extends SQLiteOpenHelper {
      * @param onQueryQSLCallsign 回调
      */
     public void getQSLCallsignsByCallsign(boolean showAll,int offset,String callsign, int filter, OnQueryQSLCallsign onQueryQSLCallsign) {
-        new GetQLSCallsignByCallsign(showAll,offset,db, callsign, filter, onQueryQSLCallsign).execute();
+        new GetQLSCallsignByCallsign(showAll,offset,db, callsign, filter, onQueryQSLCallsign).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     /**
@@ -695,7 +696,7 @@ public class DatabaseOpr extends SQLiteOpenHelper {
      * @param onGetQsoGrids 当查询结束之后的事件。
      */
     public void getQsoGridQuery(OnGetQsoGrids onGetQsoGrids) {
-        new GetQsoGrids(db, onGetQsoGrids).execute();
+        new GetQsoGrids(db, onGetQsoGrids).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     /**
@@ -705,7 +706,7 @@ public class DatabaseOpr extends SQLiteOpenHelper {
      * @param onQueryQSLRecordCallsign 回调
      */
     public void getQSLRecordByCallsign(boolean showAll,int offset,String callsign, int filter, OnQueryQSLRecordCallsign onQueryQSLRecordCallsign) {
-        new GetQSLByCallsign(showAll,offset,db, callsign, filter, onQueryQSLRecordCallsign).execute();
+        new GetQSLByCallsign(showAll,offset,db, callsign, filter, onQueryQSLRecordCallsign).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     /**
@@ -714,7 +715,7 @@ public class DatabaseOpr extends SQLiteOpenHelper {
      * @param id id号
      */
     public void deleteQSLCallsign(int id) {
-        new DeleteQSLCallsignByID(db, id).execute();
+        new DeleteQSLCallsignByID(db, id).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     /**
@@ -723,7 +724,7 @@ public class DatabaseOpr extends SQLiteOpenHelper {
      * @param id id号
      */
     public void deleteQSLByID(int id) {
-        new DeleteQSLByID(db, id).execute();
+        new DeleteQSLByID(db, id).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     /**
@@ -733,11 +734,11 @@ public class DatabaseOpr extends SQLiteOpenHelper {
      * @param id    ID号
      */
     public void setQSLTableIsQSL(boolean isQSL, int id) {
-        new SetQSLTableIsQSL(db, id, isQSL).execute();
+        new SetQSLTableIsQSL(db, id, isQSL).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     public void setQSLCallsignIsQSL(boolean isQSL, int id) {
-        new SetQSLCallsignIsQSL(db, id, isQSL).execute();
+        new SetQSLCallsignIsQSL(db, id, isQSL).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     /**
@@ -746,7 +747,7 @@ public class DatabaseOpr extends SQLiteOpenHelper {
      * @param callsign 呼号
      */
     public void getCallsignQTH(String callsign) {
-        new GetCallsignQTH(db).execute(callsign);
+        new GetCallsignQTH(db).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, callsign);
     }
 
     /**
@@ -1635,7 +1636,7 @@ public class DatabaseOpr extends SQLiteOpenHelper {
             String querySQL = "select distinct [call] from QSLTable where band=?";
             Cursor cursor = db.rawQuery(querySQL, new String[]{
                     BaseRigOperation.getMeterFromFreq(GeneralVariables.band)});
-            ArrayList<String> callsigns = new ArrayList<>();
+            HashSet<String> callsigns = new HashSet<>();
             while (cursor.moveToNext()) {
                 @SuppressLint("Range")
                 String s = cursor.getString(cursor.getColumnIndex("call"));
@@ -1650,7 +1651,7 @@ public class DatabaseOpr extends SQLiteOpenHelper {
             cursor = db.rawQuery(querySQL, new String[]{
                     BaseRigOperation.getMeterFromFreq(GeneralVariables.band)});
 
-            ArrayList<String> other_callsigns = new ArrayList<>();
+            HashSet<String> other_callsigns = new HashSet<>();
             while (cursor.moveToNext()) {
                 @SuppressLint("Range")
                 String s = cursor.getString(cursor.getColumnIndex("call"));

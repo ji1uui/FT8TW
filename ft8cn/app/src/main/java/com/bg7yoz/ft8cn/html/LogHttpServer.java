@@ -826,10 +826,12 @@ public class LogHttpServer extends NanoHTTPD {
                         , GeneralVariables.getBandString())));
 
         result.append("<tr><td class=\"default\" >");
-        for (int i = 0; i < GeneralVariables.QSL_Callsign_list.size(); i++) {
-            result.append(GeneralVariables.QSL_Callsign_list.get(i));
+        int i = 0;
+        for (String callsign : GeneralVariables.QSL_Callsign_list) {
+            result.append(callsign);
             result.append(",&nbsp;");
-            if (((i + 1) % 10) == 0) {
+            i++;
+            if ((i % 10) == 0) {
                 result.append("</td></tr><tr><td class=\"default\" >\n");
             }
         }

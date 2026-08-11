@@ -113,6 +113,7 @@ public class ColumnarView extends View {
             colRect.bottom = getHeight();
             newData.add(colRect);
         }
+        invalidate();
     }
 
 
@@ -152,10 +153,10 @@ public class ColumnarView extends View {
             freq_hz = Math.round(3000f * (float) touch_x / (float) getWidth());
             canvas.drawLine(touch_x, 0, touch_x, getHeight(), touchPaint);
         }
-        invalidate();
     }
     public void setTouch_x(int touch_x) {
         this.touch_x = touch_x;
+        invalidate();
     }
 
     public int getFreq_hz() {
