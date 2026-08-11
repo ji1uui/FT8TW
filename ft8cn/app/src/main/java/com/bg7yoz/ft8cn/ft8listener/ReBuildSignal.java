@@ -2,8 +2,8 @@ package com.bg7yoz.ft8cn.ft8listener;
 
 import android.util.Log;
 
-import com.bg7yoz.ft8cn.FT8Common;
-import com.bg7yoz.ft8cn.Ft8Message;
+import com.bg7yoz.ft8cn.ft8signal.FT8Common;
+import com.bg7yoz.ft8cn.ft8signal.Ft8Message;
 import com.bg7yoz.ft8cn.ft8transmit.GenerateFT8;
 import com.bg7yoz.ft8cn.wave.WaveFileWriter;
 

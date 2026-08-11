@@ -59,6 +59,7 @@ import com.bg7yoz.ft8cn.flex.FlexRadio;
 import com.bg7yoz.ft8cn.flex.RadioTcpClient;
 import com.bg7yoz.ft8cn.ft8listener.FT8SignalListener;
 import com.bg7yoz.ft8cn.ft8listener.OnFt8Listen;
+import com.bg7yoz.ft8cn.ft8signal.Ft8Message;
 import com.bg7yoz.ft8cn.ft8transmit.FT8TransmitSignal;
 import com.bg7yoz.ft8cn.ft8transmit.OnDoTransmitted;
 import com.bg7yoz.ft8cn.ft8transmit.OnTransmitSuccess;

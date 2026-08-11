@@ -1,4 +1,4 @@
-package com.bg7yoz.ft8cn;
+package com.bg7yoz.ft8cn.ft8signal;
 /**
  * 呼号的哈希码列表。
  * @author BGY70Z

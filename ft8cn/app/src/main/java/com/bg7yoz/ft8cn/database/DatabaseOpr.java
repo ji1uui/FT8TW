@@ -18,10 +18,10 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import com.bg7yoz.ft8cn.FT8Common;
-import com.bg7yoz.ft8cn.Ft8Message;
+import com.bg7yoz.ft8cn.ft8signal.FT8Common;
+import com.bg7yoz.ft8cn.ft8signal.Ft8Message;
 import com.bg7yoz.ft8cn.GeneralVariables;
-import com.bg7yoz.ft8cn.EncryptionUtil;
+import com.bg7yoz.ft8cn.util.EncryptionUtil;
 import com.bg7yoz.ft8cn.connector.ConnectMode; //BV6LC
 import com.bg7yoz.ft8cn.R;
 import com.bg7yoz.ft8cn.ft8signal.FT8Package;

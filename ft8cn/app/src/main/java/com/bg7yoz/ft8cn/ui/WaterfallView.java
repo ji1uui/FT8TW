@@ -25,7 +25,7 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.bg7yoz.ft8cn.Ft8Message;
+import com.bg7yoz.ft8cn.ft8signal.Ft8Message;
 import com.bg7yoz.ft8cn.GeneralVariables;
 import com.bg7yoz.ft8cn.timer.UtcTimer;
 

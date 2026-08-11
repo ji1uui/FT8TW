@@ -8,7 +8,6 @@ package com.bg7yoz.ft8cn.ft8signal;
 
 import android.util.Log;
 
-import com.bg7yoz.ft8cn.Ft8Message;
 import com.bg7yoz.ft8cn.ft8transmit.GenerateFT8;
 
 public class FT8Package {

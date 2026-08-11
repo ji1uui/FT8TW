@@ -27,10 +27,9 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 
-import com.bg7yoz.ft8cn.FAQActivity;
-import com.bg7yoz.ft8cn.Ft8Message;
+import com.bg7yoz.ft8cn.ft8signal.Ft8Message;
 import com.bg7yoz.ft8cn.GeneralVariables;
-import com.bg7yoz.ft8cn.EncryptionUtil;
+import com.bg7yoz.ft8cn.util.EncryptionUtil;
 import com.bg7yoz.ft8cn.MainViewModel;
 import com.bg7yoz.ft8cn.R;
 import com.bg7yoz.ft8cn.connector.ConnectMode;

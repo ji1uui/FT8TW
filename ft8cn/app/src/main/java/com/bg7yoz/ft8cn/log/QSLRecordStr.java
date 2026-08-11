@@ -3,7 +3,7 @@ package com.bg7yoz.ft8cn.log;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import com.bg7yoz.ft8cn.Ft8Message;
+import com.bg7yoz.ft8cn.ft8signal.Ft8Message;
 
 import java.io.Serializable;
 

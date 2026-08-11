@@ -1,4 +1,4 @@
-package com.bg7yoz.ft8cn;
+package com.bg7yoz.ft8cn.util;
 
 import android.content.Context;
 import android.provider.Settings;

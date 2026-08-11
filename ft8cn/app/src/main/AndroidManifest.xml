@@ -36,7 +36,7 @@
                 android:value="" />
         </activity>
         <activity
-            android:name=".FAQActivity"
+            android:name=".ui.FAQActivity"
             android:exported="false" />
         <activity
             android:name=".MainActivity"
