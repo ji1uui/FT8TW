@@ -5,7 +5,7 @@ package com.bg7yoz.ft8cn.ft8transmit;
  * @date 2023-03-20
  */
 
-import com.bg7yoz.ft8cn.Ft8Message;
+import com.bg7yoz.ft8cn.ft8signal.Ft8Message;
 
 public class FunctionOfTransmit {
     private int functionOrder;//消息的序号

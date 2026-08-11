@@ -2,7 +2,7 @@ package com.bg7yoz.ft8cn.rigs;
 
 import android.util.Log;
 
-import com.bg7yoz.ft8cn.Ft8Message;
+import com.bg7yoz.ft8cn.ft8signal.Ft8Message;
 import com.bg7yoz.ft8cn.GeneralVariables;
 import com.bg7yoz.ft8cn.connector.X6100Connector;
 import com.bg7yoz.ft8cn.ft8transmit.GenerateFT8;

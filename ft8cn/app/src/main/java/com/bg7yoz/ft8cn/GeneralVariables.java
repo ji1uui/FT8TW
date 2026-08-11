@@ -15,6 +15,7 @@ import com.bg7yoz.ft8cn.callsign.CallsignInfo; //BV6LC
 import com.bg7yoz.ft8cn.connector.ConnectMode;
 import com.bg7yoz.ft8cn.database.ControlMode;
 import com.bg7yoz.ft8cn.database.DatabaseOpr;
+import com.bg7yoz.ft8cn.ft8signal.Ft8Message;
 import com.bg7yoz.ft8cn.ft8transmit.QslRecordList;
 import com.bg7yoz.ft8cn.html.HtmlContext;
 import com.bg7yoz.ft8cn.icom.IcomAudioUdp;

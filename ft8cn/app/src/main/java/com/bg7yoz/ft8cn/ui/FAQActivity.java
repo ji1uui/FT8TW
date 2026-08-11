@@ -1,4 +1,4 @@
-package com.bg7yoz.ft8cn;
+package com.bg7yoz.ft8cn.ui;
 /**
  * 问题收集的WebView。
  * @author BGY70Z
@@ -11,6 +11,8 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.bg7yoz.ft8cn.R;
 
 public class FAQActivity extends AppCompatActivity {
 

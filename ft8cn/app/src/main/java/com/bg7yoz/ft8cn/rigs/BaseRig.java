@@ -2,7 +2,7 @@ package com.bg7yoz.ft8cn.rigs;
 
 import androidx.lifecycle.MutableLiveData;
 
-import com.bg7yoz.ft8cn.Ft8Message;
+import com.bg7yoz.ft8cn.ft8signal.Ft8Message;
 import com.bg7yoz.ft8cn.connector.BaseRigConnector;
 
 /**

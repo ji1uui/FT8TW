@@ -1,4 +1,4 @@
-package com.bg7yoz.ft8cn;
+package com.bg7yoz.ft8cn.ft8signal;
 /**
  * Ft8Message类是用于展现FT8信号的解析结果。
  * 包括UTC时间、信噪比、时间偏移、频率、得分、消息的文本、消息的哈希值

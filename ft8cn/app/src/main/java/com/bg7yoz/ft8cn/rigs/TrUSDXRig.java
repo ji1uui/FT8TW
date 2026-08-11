@@ -14,7 +14,7 @@ import static com.bg7yoz.ft8cn.GeneralVariables.START_QUERY_FREQ_DELAY;
 import android.os.Handler;
 import android.util.Log;
 
-import com.bg7yoz.ft8cn.Ft8Message;
+import com.bg7yoz.ft8cn.ft8signal.Ft8Message;
 import com.bg7yoz.ft8cn.GeneralVariables;
 import com.bg7yoz.ft8cn.R;
 import com.bg7yoz.ft8cn.database.ControlMode;
