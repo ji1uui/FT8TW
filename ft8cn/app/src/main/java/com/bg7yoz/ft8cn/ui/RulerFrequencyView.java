@@ -20,6 +20,10 @@ public class RulerFrequencyView extends View {
     private static final String TAG = "RulerFrequencyView";
     private int rulerWidth = getWidth();
     private int freq = 1000;
+    private final Rect rect = new Rect();
+    private final Rect mark = new Rect();
+    private final Paint paint = new Paint();
+    private final Paint fontPaint = new Paint();
 
     public RulerFrequencyView(Context context) {
         super(context);
@@ -65,9 +69,11 @@ public class RulerFrequencyView extends View {
         int width_rate = Math.round((float) rulerWidth / 30f);
         int lineWidth = (int) (getResources().getDisplayMetrics().density);
         int lineHeight = (int) (2 * getResources().getDisplayMetrics().density);
-        Rect rect = new Rect();
-        Paint paint = new Paint();
         paint.setColor(0xff00ffff);
+        fontPaint.setTextSize(dpToPixel(8));
+        fontPaint.setColor(0xff00ffff);
+        fontPaint.setAntiAlias(true);
+        fontPaint.setDither(true);
         for (int i = 0; i <= 300; i++) {
             if (i % 1 == 0) {
                 rect.top = top;
@@ -75,11 +81,6 @@ public class RulerFrequencyView extends View {
                 rect.right = rect.left + lineWidth;
                 if (i % 5 == 0) {
                     rect.bottom = top + lineHeight * 3;
-                    Paint fontPaint = new Paint();
-                    fontPaint.setTextSize(dpToPixel(8));
-                    fontPaint.setColor(0xff00ffff);
-                    fontPaint.setAntiAlias(true);
-                    fontPaint.setDither(true);
                     if (i == 0) {
                         fontPaint.setTextAlign(Paint.Align.LEFT);
                     } else if (i == 300) {
@@ -106,7 +107,6 @@ public class RulerFrequencyView extends View {
         canvas.drawRect(rect, paint);
 
         //当前频率范围标记。红色块
-        Rect mark = new Rect();
         paint.setColor(0xffff0000);
         mark.top = 1;
         mark.left = width_rate * (freq - 50) / 100;

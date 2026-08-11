@@ -195,7 +195,6 @@ public class WaterfallView extends View {
             canvas.drawLine(touch_x, 0, touch_x, getHeight(), touchPaint);
 
         }
-        invalidate();
     }
 
     public void setWaveData(int[] data, int sequential, List<Ft8Message> msgs) {
@@ -292,11 +291,12 @@ public class WaterfallView extends View {
             }
         }
 
-
+        invalidate();
     }
 
     public void setTouch_x(int touch_x) {
         this.touch_x = touch_x;
+        invalidate();
     }
 
     public void setDrawMessage(boolean drawMessage) {
